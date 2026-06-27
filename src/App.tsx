@@ -131,6 +131,7 @@ export default function App() {
         title={ja.pwa.updateConfirmTitle}
         message={ja.pwa.updateConfirmMessage}
         confirmLabel={ja.pwa.updateButton}
+        cancelLabel={ja.pwa.updateCancelLabel}
         onConfirm={() => { setUpdatePending(false); updateServiceWorker(true); }}
         onCancel={() => setUpdatePending(false)}
       />

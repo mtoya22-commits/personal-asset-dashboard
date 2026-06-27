@@ -174,21 +174,146 @@ function validateSnapshots(snapshots: unknown[]): ValidationResult {
     if (!isNonNegativeInt(snap.totalAssets)) {
       return { ok: false, error: `totalAssetsが不正です: ${snap.monthKey}` };
     }
+
+    const monthKey = snap.monthKey as string;
+    const totalAssets = snap.totalAssets as number;
+
+    // Validate assetClassBreakdown
     if (typeof snap.assetClassBreakdown !== 'object' || snap.assetClassBreakdown === null) {
-      return { ok: false, error: `assetClassBreakdownが不正です: ${snap.monthKey}` };
+      return { ok: false, error: `assetClassBreakdownが不正です: ${monthKey}` };
     }
     const acd = snap.assetClassBreakdown as Record<string, unknown>;
     if (!isNonNegativeFinite(acd.cash) || !isNonNegativeFinite(acd.investment) || !isNonNegativeFinite(acd.crypto)) {
-      return { ok: false, error: `assetClassBreakdownの値が不正です: ${snap.monthKey}` };
+      return { ok: false, error: `assetClassBreakdownの値が不正です: ${monthKey}` };
     }
-    const classSum = (acd.cash as number) + (acd.investment as number) + (acd.crypto as number);
-    if (Math.round(classSum) !== (snap.totalAssets as number)) {
-      return { ok: false, error: `totalAssetsとassetClassBreakdownの合計が一致しません: ${snap.monthKey}` };
+    const storedCash = acd.cash as number;
+    const storedInvestment = acd.investment as number;
+    const storedCrypto = acd.crypto as number;
+    if (Math.round(storedCash + storedInvestment + storedCrypto) !== totalAssets) {
+      return { ok: false, error: `totalAssetsとassetClassBreakdownの合計が一致しません: ${monthKey}` };
     }
+
+    // Validate holdingsSnapshot array and compute sums
     if (!Array.isArray(snap.holdingsSnapshot)) {
-      return { ok: false, error: `holdingsSnapshotが不正です: ${snap.monthKey}` };
+      return { ok: false, error: `holdingsSnapshotが不正です: ${monthKey}` };
+    }
+    const consistencyResult = validateSnapshotConsistency(
+      monthKey,
+      totalAssets,
+      snap.holdingsSnapshot as unknown[],
+      snap.categoryBreakdown as unknown,
+      storedCash,
+      storedInvestment,
+      storedCrypto,
+    );
+    if (!consistencyResult.ok) return consistencyResult;
+  }
+  return { ok: true };
+}
+
+function validateSnapshotConsistency(
+  monthKey: string,
+  totalAssets: number,
+  holdingsSnap: unknown[],
+  categoryBreakdownRaw: unknown,
+  storedCash: number,
+  storedInvestment: number,
+  storedCrypto: number,
+): ValidationResult {
+  // Validate each holdingsSnapshot item and compute derived totals
+  let holdingsTotal = 0;
+  let computedCash = 0;
+  let computedInvestment = 0;
+  let computedCrypto = 0;
+  const computedCatMap = new Map<string, number>();
+
+  for (const h of holdingsSnap) {
+    if (typeof h !== 'object' || h === null) {
+      return { ok: false, error: `holdingsSnapshotのデータ形式が不正です: ${monthKey}` };
+    }
+    const hs = h as Record<string, unknown>;
+    if (!isNonNegativeInt(hs.marketValue)) {
+      return { ok: false, error: `holdingsSnapshotのmarketValueが不正です: ${monthKey}` };
+    }
+    if (!isValidAssetClass(hs.assetClass)) {
+      return { ok: false, error: `holdingsSnapshotのassetClassが不正です: ${monthKey}` };
+    }
+    if (typeof hs.categoryId !== 'string' || !hs.categoryId) {
+      return { ok: false, error: `holdingsSnapshotのcategoryIdが不正です: ${monthKey}` };
+    }
+
+    const mv = hs.marketValue as number;
+    holdingsTotal += mv;
+    computedCatMap.set(hs.categoryId, (computedCatMap.get(hs.categoryId) ?? 0) + mv);
+
+    if (hs.assetClass === 'cash') computedCash += mv;
+    else if (hs.assetClass === 'crypto') computedCrypto += mv;
+    else computedInvestment += mv;
+  }
+
+  // holdingsSnapshot sum must equal totalAssets
+  if (Math.round(holdingsTotal) !== totalAssets) {
+    return { ok: false, error: `holdingsSnapshotの合計とtotalAssetsが一致しません: ${monthKey}` };
+  }
+
+  // holdingsSnapshot-derived assetClass breakdown must match stored
+  if (
+    Math.round(computedCash) !== Math.round(storedCash) ||
+    Math.round(computedInvestment) !== Math.round(storedInvestment) ||
+    Math.round(computedCrypto) !== Math.round(storedCrypto)
+  ) {
+    return { ok: false, error: `holdingsSnapshotの大分類集計とassetClassBreakdownが一致しません: ${monthKey}` };
+  }
+
+  // Validate categoryBreakdown array
+  if (!Array.isArray(categoryBreakdownRaw)) {
+    return { ok: false, error: `categoryBreakdownが不正です: ${monthKey}` };
+  }
+  const categoryBreakdown = categoryBreakdownRaw as unknown[];
+
+  // Check for duplicate categoryIds and validate structure
+  const catBdIds = new Set<string>();
+  let catBdSum = 0;
+  const storedCatMap = new Map<string, number>();
+  for (const entry of categoryBreakdown) {
+    if (typeof entry !== 'object' || entry === null) {
+      return { ok: false, error: `categoryBreakdownのデータ形式が不正です: ${monthKey}` };
+    }
+    const e = entry as Record<string, unknown>;
+    if (typeof e.categoryId !== 'string' || !e.categoryId) {
+      return { ok: false, error: `categoryBreakdownのcategoryIdが不正です: ${monthKey}` };
+    }
+    if (catBdIds.has(e.categoryId)) {
+      return { ok: false, error: `categoryBreakdownにcategoryIdの重複があります: ${monthKey}` };
+    }
+    catBdIds.add(e.categoryId);
+    if (!isNonNegativeFinite(e.value)) {
+      return { ok: false, error: `categoryBreakdownのvalueが不正です: ${monthKey}` };
+    }
+    if (!isValidAssetClass(e.assetClass)) {
+      return { ok: false, error: `categoryBreakdownのassetClassが不正です: ${monthKey}` };
+    }
+    const val = e.value as number;
+    catBdSum += val;
+    storedCatMap.set(e.categoryId, val);
+  }
+
+  // categoryBreakdown sum must equal totalAssets
+  if (Math.round(catBdSum) !== totalAssets) {
+    return { ok: false, error: `categoryBreakdownの合計とtotalAssetsが一致しません: ${monthKey}` };
+  }
+
+  // holdingsSnapshot-derived category breakdown must match stored categoryBreakdown
+  if (computedCatMap.size !== storedCatMap.size) {
+    return { ok: false, error: `holdingsSnapshotのカテゴリ集計とcategoryBreakdownが一致しません: ${monthKey}` };
+  }
+  for (const [catId, computedVal] of computedCatMap) {
+    const storedVal = storedCatMap.get(catId);
+    if (storedVal === undefined || Math.round(computedVal) !== Math.round(storedVal)) {
+      return { ok: false, error: `holdingsSnapshotのカテゴリ集計とcategoryBreakdownが一致しません: ${monthKey}` };
     }
   }
+
   return { ok: true };
 }
 

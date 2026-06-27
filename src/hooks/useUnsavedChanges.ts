@@ -14,6 +14,10 @@ export function hasUnsavedChanges(): boolean {
   return dirtyKeys.size > 0;
 }
 
+export function resetDirtyState(): void {
+  dirtyKeys.clear();
+}
+
 export function useDirtyFlag(key: string, isDirty: boolean): void {
   useEffect(() => {
     if (isDirty) {

@@ -155,14 +155,129 @@ describe('validateBackupFile', () => {
         monthKey: '2026-01',
         snapshotDate: '2026-01-31',
         totalAssets: 1500000,
-        categoryBreakdown: [],
+        categoryBreakdown: [
+          { categoryId: 'cat-1', categoryName: 'Cash', value: 500000, assetClass: 'cash' as const },
+          { categoryId: 'cat-2', categoryName: 'Stocks', value: 1000000, assetClass: 'investment' as const },
+        ],
         assetClassBreakdown: { cash: 500000, investment: 1000000, crypto: 0 },
-        holdingsSnapshot: [],
+        holdingsSnapshot: [
+          { id: 'h1', name: 'Cash', categoryId: 'cat-1', categoryName: 'Cash', assetClass: 'cash' as const, accountType: 'その他' as const, marketValue: 500000 },
+          { id: 'h2', name: 'Stock', categoryId: 'cat-2', categoryName: 'Stocks', assetClass: 'investment' as const, accountType: 'その他' as const, marketValue: 1000000 },
+        ],
         createdAt: '',
         updatedAt: '',
       },
     ];
     expect(validateBackupFile(backup).ok).toBe(true);
+  });
+
+  it('rejects snapshot where categoryBreakdown sum differs from totalAssets', () => {
+    const backup = makeValidBackup();
+    backup.snapshots = [
+      {
+        id: 's1',
+        monthKey: '2026-01',
+        snapshotDate: '2026-01-31',
+        totalAssets: 1000000,
+        categoryBreakdown: [{ categoryId: 'cat-1', categoryName: 'Cash', value: 500000, assetClass: 'cash' as const }],
+        assetClassBreakdown: { cash: 1000000, investment: 0, crypto: 0 },
+        holdingsSnapshot: [{ id: 'h1', name: 'Cash', categoryId: 'cat-1', categoryName: 'Cash', assetClass: 'cash' as const, accountType: 'その他' as const, marketValue: 1000000 }],
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    const result = validateBackupFile(backup);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('categoryBreakdownの合計');
+  });
+
+  it('rejects snapshot where holdingsSnapshot sum differs from totalAssets', () => {
+    const backup = makeValidBackup();
+    backup.snapshots = [
+      {
+        id: 's1',
+        monthKey: '2026-01',
+        snapshotDate: '2026-01-31',
+        totalAssets: 1000000,
+        categoryBreakdown: [{ categoryId: 'cat-1', categoryName: 'Cash', value: 1000000, assetClass: 'cash' as const }],
+        assetClassBreakdown: { cash: 1000000, investment: 0, crypto: 0 },
+        holdingsSnapshot: [{ id: 'h1', name: 'Cash', categoryId: 'cat-1', categoryName: 'Cash', assetClass: 'cash' as const, accountType: 'その他' as const, marketValue: 500000 }],
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    const result = validateBackupFile(backup);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('holdingsSnapshotの合計');
+  });
+
+  it('rejects snapshot where holdingsSnapshot category totals differ from categoryBreakdown', () => {
+    const backup = makeValidBackup();
+    backup.snapshots = [
+      {
+        id: 's1',
+        monthKey: '2026-01',
+        snapshotDate: '2026-01-31',
+        totalAssets: 1000000,
+        categoryBreakdown: [
+          { categoryId: 'cat-1', categoryName: 'A', value: 400000, assetClass: 'cash' as const },
+          { categoryId: 'cat-2', categoryName: 'B', value: 600000, assetClass: 'cash' as const },
+        ],
+        assetClassBreakdown: { cash: 1000000, investment: 0, crypto: 0 },
+        holdingsSnapshot: [
+          { id: 'h1', name: 'A', categoryId: 'cat-1', categoryName: 'A', assetClass: 'cash' as const, accountType: 'その他' as const, marketValue: 500000 },
+          { id: 'h2', name: 'B', categoryId: 'cat-2', categoryName: 'B', assetClass: 'cash' as const, accountType: 'その他' as const, marketValue: 500000 },
+        ],
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    const result = validateBackupFile(backup);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('カテゴリ集計');
+  });
+
+  it('rejects snapshot where holdingsSnapshot assetClass totals differ from assetClassBreakdown', () => {
+    const backup = makeValidBackup();
+    backup.snapshots = [
+      {
+        id: 's1',
+        monthKey: '2026-01',
+        snapshotDate: '2026-01-31',
+        totalAssets: 1000000,
+        categoryBreakdown: [{ categoryId: 'cat-1', categoryName: 'Inv', value: 1000000, assetClass: 'investment' as const }],
+        assetClassBreakdown: { cash: 1000000, investment: 0, crypto: 0 },
+        holdingsSnapshot: [{ id: 'h1', name: 'Inv', categoryId: 'cat-1', categoryName: 'Inv', assetClass: 'investment' as const, accountType: 'その他' as const, marketValue: 1000000 }],
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    const result = validateBackupFile(backup);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('大分類集計');
+  });
+
+  it('rejects snapshot with duplicate categoryId in categoryBreakdown', () => {
+    const backup = makeValidBackup();
+    backup.snapshots = [
+      {
+        id: 's1',
+        monthKey: '2026-01',
+        snapshotDate: '2026-01-31',
+        totalAssets: 1000000,
+        categoryBreakdown: [
+          { categoryId: 'cat-1', categoryName: 'Cash', value: 500000, assetClass: 'cash' as const },
+          { categoryId: 'cat-1', categoryName: 'Cash', value: 500000, assetClass: 'cash' as const },
+        ],
+        assetClassBreakdown: { cash: 1000000, investment: 0, crypto: 0 },
+        holdingsSnapshot: [{ id: 'h1', name: 'Cash', categoryId: 'cat-1', categoryName: 'Cash', assetClass: 'cash' as const, accountType: 'その他' as const, marketValue: 1000000 }],
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    const result = validateBackupFile(backup);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('重複');
   });
 });
 
