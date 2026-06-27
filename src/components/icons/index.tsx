@@ -125,3 +125,18 @@ export const EditIcon = makeIcon(
 export const ChevronRightIcon = makeIcon(
   <polyline points="9 18 15 12 9 6" />,
 );
+
+export const SearchIcon = makeIcon(
+  <>
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </>,
+);
+
+export const MoreHorizontalIcon = makeIcon(
+  <>
+    <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+  </>,
+);

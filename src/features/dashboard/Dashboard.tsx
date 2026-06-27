@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from 'recharts';
+
 import type { AppData } from '../../hooks/useAppData.js';
 import { CheckIcon } from '../../components/icons/index.js';
 import {
@@ -34,6 +35,24 @@ type DashboardProps = {
   masked: boolean;
   onGoToSettings: () => void;
   onGoToMonthlyUpdate: () => void;
+};
+
+const MaskedTooltip = ({
+  active,
+  payload,
+  masked,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number }>;
+  masked: boolean;
+}) => {
+  if (!active || !payload?.length || masked) return null;
+  return (
+    <div className="chart-tooltip">
+      <div className="chart-tooltip-label">{payload[0].name}</div>
+      <div className="chart-tooltip-value">{formatCurrency(payload[0].value ?? 0, false)}</div>
+    </div>
+  );
 };
 
 export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }: DashboardProps) {
@@ -132,89 +151,79 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
 
   return (
     <div className="screen">
-      {/* Main total */}
-      <div className="card">
+      {/* Hero */}
+      <div className="card" style={{ paddingBottom: 18 }}>
         <div className="card-title">{ja.dashboard.currentAssets}</div>
-        <div className="amount-large" style={{ marginBottom: 4 }}>
+        <div className="hero-amount" style={{ marginBottom: 10 }}>
           {formatCurrency(total, masked)}
         </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-3)' }}>
-          {ja.dashboard.currentValue} — {ja.dashboard.assetNote}
-        </div>
+
+        {prevComparison && (
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>{ja.dashboard.prevMonthComparison}</span>
+            <span className={`amount-small ${diffClass(prevComparison.diff)}`}>
+              {formatDiff(prevComparison.diff, masked)}
+            </span>
+            <span style={{ fontSize: '0.82rem', color: diffClass(prevComparison.diff) === 'diff-positive' ? 'var(--positive)' : diffClass(prevComparison.diff) === 'diff-negative' ? 'var(--negative)' : 'var(--text-subtle)' }}>
+              ({formatDiffPercent(prevComparison.diffPercent ?? 0)})
+            </span>
+          </div>
+        )}
+        {prevComparison && (
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', marginBottom: yearComparison ? 8 : 0 }}>
+            {ja.dashboard.comparisonBase}: {formatDate(prevComparison.baseDate)}
+          </div>
+        )}
+
+        {yearComparison && (
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginTop: 6, marginBottom: 4 }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
+              {yearComparison.label === 'yearStart' ? ja.dashboard.yearStartComparison : ja.dashboard.yearFirstComparison}
+            </span>
+            <span className={`amount-small ${diffClass(yearComparison.diff)}`}>
+              {formatDiff(yearComparison.diff, masked)}
+            </span>
+            <span style={{ fontSize: '0.82rem', color: diffClass(yearComparison.diff) === 'diff-positive' ? 'var(--positive)' : diffClass(yearComparison.diff) === 'diff-negative' ? 'var(--negative)' : 'var(--text-subtle)' }}>
+              ({formatDiffPercent(yearComparison.diffPercent ?? 0)})
+            </span>
+          </div>
+        )}
+        {yearComparison?.label === 'yearFirst' && (
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', marginBottom: 0 }}>
+            {ja.dashboard.comparisonBase}: {formatDate(yearComparison.baseDate)}
+          </div>
+        )}
 
         {lastHoldingUpdate && (
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-3)', marginTop: 6 }}>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', marginTop: 8 }}>
             {ja.dashboard.lastUpdated}: {formatDate(lastHoldingUpdate.updatedAt)}
           </div>
         )}
 
-        {/* Changed since snapshot notice */}
         {snapshotChangedSince && (
           <div className="notice notice-info" style={{ marginTop: 12 }}>
             <div>{ja.dashboard.snapshotChanged}</div>
-            <button
-              className="btn btn-primary btn-sm"
-              style={{ marginTop: 8 }}
-              onClick={onGoToMonthlyUpdate}
-            >
+            <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={onGoToMonthlyUpdate}>
               {ja.dashboard.updateSnapshot}
             </button>
           </div>
         )}
       </div>
 
-      {/* Comparisons */}
-      {prevComparison && (
-        <div className="card">
-          <div className="card-title">{ja.dashboard.prevMonthComparison}</div>
-          <div className={`amount-medium ${diffClass(prevComparison.diff)}`}>
-            {formatDiff(prevComparison.diff, masked)}
-            <span style={{ marginLeft: 8, fontSize: '0.9rem' }}>
-              ({formatDiffPercent(prevComparison.diffPercent ?? 0)})
-            </span>
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-3)', marginTop: 4 }}>
-            {ja.dashboard.comparisonBase}: {formatDate(prevComparison.baseDate)}
-            {' '}({formatCurrency(prevComparison.baseTotal, masked)})
-          </div>
-        </div>
-      )}
-
-      {yearComparison && (
-        <div className="card">
-          <div className="card-title">
-            {yearComparison.label === 'yearStart'
-              ? ja.dashboard.yearStartComparison
-              : ja.dashboard.yearFirstComparison}
-          </div>
-          <div className={`amount-medium ${diffClass(yearComparison.diff)}`}>
-            {formatDiff(yearComparison.diff, masked)}
-            <span style={{ marginLeft: 8, fontSize: '0.9rem' }}>
-              ({formatDiffPercent(yearComparison.diffPercent ?? 0)})
-            </span>
-          </div>
-          {yearComparison.label === 'yearFirst' && (
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-3)', marginTop: 4 }}>
-              {ja.dashboard.comparisonBase}: {formatDate(yearComparison.baseDate)}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* FIRE progress */}
       <div className="card">
         <div className="card-title">{ja.dashboard.fireProgress}</div>
         {fire.isGoalSet ? (
           <>
-            <div className="row-between" style={{ marginBottom: 6 }}>
-              <span style={{ fontSize: '0.82rem', color: 'var(--color-text-2)' }}>
+            <div className="row-between" style={{ marginBottom: 8 }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                 {ja.dashboard.fireTarget}: {formatCurrency(fire.targetAmount, masked)}
               </span>
-              <span className="amount-small">
+              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--brand)' }}>
                 {formatPercent(fire.reached * 100)}
               </span>
             </div>
-            <div className="progress-bar">
+            <div className="progress-bar" style={{ marginBottom: 8 }}>
               <div
                 className="progress-fill"
                 style={{ width: `${Math.min(fire.reached * 100, 100)}%` }}
@@ -224,36 +233,36 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
                 aria-valuemax={100}
               />
             </div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--color-text-2)', marginTop: 6 }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
               {ja.dashboard.fireRemaining}: {formatCurrency(fire.remaining, masked)}
             </div>
           </>
         ) : (
-          <div>
-            <div style={{ color: 'var(--color-text-3)', fontSize: '0.88rem', marginBottom: 8 }}>
+          <>
+            <div style={{ color: 'var(--text-subtle)', fontSize: '0.85rem', marginBottom: 8 }}>
               FIRE目標が設定されていません
             </div>
             <button className="btn btn-ghost btn-sm" onClick={onGoToSettings}>
               {ja.dashboard.setFireTarget}
             </button>
-          </div>
+          </>
         )}
       </div>
 
-      {/* Asset class breakdown */}
+      {/* Asset class breakdown (ledger style) */}
       <div className="card">
         <div className="card-title">{ja.dashboard.assetClassBreakdown}</div>
         {[
-          { label: ja.assetClass.cash, value: assetClass.cash, ratio: total > 0 ? assetClass.cash / total : 0 },
-          { label: ja.assetClass.investment, value: assetClass.investment, ratio: total > 0 ? assetClass.investment / total : 0 },
-          { label: ja.assetClass.crypto, value: assetClass.crypto, ratio: total > 0 ? assetClass.crypto / total : 0 },
-        ].map(({ label, value, ratio }) => (
-          <div key={label} className="row-between" style={{ padding: '6px 0', borderBottom: '1px solid var(--color-surface-2)' }}>
-            <span style={{ fontSize: '0.88rem' }}>{label}</span>
-            <span style={{ textAlign: 'right' }}>
-              <span className="amount-small">{formatCurrency(value, masked)}</span>
-              <span style={{ marginLeft: 8, color: 'var(--color-text-3)', fontSize: '0.82rem' }}>
-                {formatPercent(ratio * 100)}
+          { label: ja.assetClass.cash, value: assetClass.cash },
+          { label: ja.assetClass.investment, value: assetClass.investment },
+          { label: ja.assetClass.crypto, value: assetClass.crypto },
+        ].map(({ label, value }) => (
+          <div key={label} className="stat-row">
+            <span className="stat-label">{label}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span className="stat-value">{formatCurrency(value, masked)}</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', minWidth: 40, textAlign: 'right' }}>
+                {formatPercent(total > 0 ? (value / total) * 100 : 0)}
               </span>
             </span>
           </div>
@@ -266,7 +275,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
           <div className="card-title">{ja.dashboard.nisaValue}</div>
           <div className="amount-medium">{formatCurrency(nisaValue, masked)}</div>
           {nisaRatio !== null && (
-            <div style={{ fontSize: '0.82rem', color: 'var(--color-text-2)', marginTop: 4 }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>
               {ja.dashboard.nisaRatio}: {formatPercent(nisaRatio * 100)}
             </div>
           )}
@@ -287,10 +296,10 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
               </span>
             )}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-3)', marginTop: 4 }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginTop: 4 }}>
             {ja.unrealizedGains.scope}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-3)' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
             {ja.unrealizedGains.targetValue}: {formatCurrency(unrealizedGains.targetMarketValue, masked)}
             {' / '}
             {ja.unrealizedGains.investmentTotal}: {formatCurrency(unrealizedGains.investmentCryptoTotal, masked)}
@@ -318,9 +327,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip
-                  formatter={(value: number) => [formatCurrency(value), '']}
-                />
+                <Tooltip content={(props) => <MaskedTooltip active={props.active} payload={props.payload as Array<{ name?: string; value?: number }>} masked={masked} />} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -375,7 +382,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
                 <tr key={holding.id}>
                   <td>
                     <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{holding.name}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-3)' }}>{categoryName}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>{categoryName}</div>
                   </td>
                   <td style={{ textAlign: 'right' }}>{formatCurrency(holding.marketValue, masked)}</td>
                   <td style={{ textAlign: 'right' }}>{formatPercent(ratio * 100)}</td>
@@ -398,7 +405,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
             <div className={`check-icon ${done ? 'done' : 'pending'}`}>
               {done && <CheckIcon size={12} />}
             </div>
-            <span style={{ fontSize: '0.88rem', color: done ? 'var(--color-text)' : 'var(--color-text-2)' }}>
+            <span style={{ fontSize: '0.88rem', color: done ? 'var(--text)' : 'var(--text-muted)' }}>
               {label}
             </span>
           </div>
@@ -413,7 +420,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
             <div style={{ fontSize: '0.88rem', marginBottom: 4 }}>
               {formatDate(settings.lastBackupExportInitiatedAt)}
               {lastBackupDays !== null && (
-                <span style={{ color: 'var(--color-text-3)', marginLeft: 8 }}>
+                <span style={{ color: 'var(--text-subtle)', marginLeft: 8 }}>
                   ({lastBackupDays === 0 ? ja.backup.today : `${lastBackupDays}${ja.backup.daysSince}`})
                 </span>
               )}
@@ -430,7 +437,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
             )}
           </>
         ) : (
-          <div style={{ color: 'var(--color-text-3)', fontSize: '0.88rem' }}>未実施</div>
+          <div style={{ color: 'var(--text-subtle)', fontSize: '0.88rem' }}>未実施</div>
         )}
         <div className="card-title" style={{ marginTop: 10 }}>
           {ja.dashboard.snapshotStatus}
