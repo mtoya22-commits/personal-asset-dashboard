@@ -6,6 +6,7 @@ import {
   calcAssetClassBreakdown,
   calcCategoryRatios,
   calcAccountTypeBreakdown,
+  calcNisaValue,
   calcPrevSnapshotComparison,
   calcYearComparison,
   calcFireProgress,
@@ -137,6 +138,40 @@ describe('calcAccountTypeBreakdown', () => {
     const tokutei = result.find((r) => r.accountType === '特定');
     expect(nisa?.value).toBe(800000);
     expect(tokutei?.value).toBe(200000);
+  });
+});
+
+// ──────────────────────── NISA value ────────────────────────
+describe('calcNisaValue', () => {
+  it('sums only NISA holdings in investment categories', () => {
+    const cats = [
+      makeCategory('cat-inv', 'investment'),
+      makeCategory('cat-cash', 'cash'),
+    ];
+    const holdings: Holding[] = [
+      { ...makeHolding('h1', 'cat-inv', 500000), accountType: 'NISA' },
+      { ...makeHolding('h2', 'cat-inv', 300000), accountType: '特定' },
+      { ...makeHolding('h3', 'cat-cash', 200000), accountType: 'NISA' },
+    ];
+    expect(calcNisaValue(holdings, cats)).toBe(500000);
+  });
+
+  it('excludes NISA holdings in cash/crypto categories', () => {
+    const cats = [
+      makeCategory('cat-cash', 'cash'),
+      makeCategory('cat-crypto', 'crypto'),
+    ];
+    const holdings: Holding[] = [
+      { ...makeHolding('h1', 'cat-cash', 100000), accountType: 'NISA' },
+      { ...makeHolding('h2', 'cat-crypto', 200000), accountType: 'NISA' },
+    ];
+    expect(calcNisaValue(holdings, cats)).toBe(0);
+  });
+
+  it('returns 0 when no NISA holdings', () => {
+    const cats = [makeCategory('cat-inv', 'investment')];
+    const holdings: Holding[] = [makeHolding('h1', 'cat-inv', 1000000)];
+    expect(calcNisaValue(holdings, cats)).toBe(0);
   });
 });
 

@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import type { Holding, AssetCategory, AccountType } from '../../types/index.js';
 import { validateHoldingInput, normalizeIntegerInput, normalizeNumericInput } from '../../lib/validators/index.js';
 import { getISONow } from '../../lib/formatters/index.js';
+import { useDirtyFlag } from '../../hooks/useUnsavedChanges.js';
 import { Dialog } from '../../components/Dialog.js';
 import { ja } from '../../strings/ja.js';
 
-const ACCOUNT_TYPES: AccountType[] = ['NISA', '特定', 'iDeCo', 'DC', '預金', '暗号資産取引所', 'その他'];
+const ALL_ACCOUNT_TYPES: AccountType[] = ['NISA', '特定', 'iDeCo', 'DC', '預金', '暗号資産取引所', 'その他'];
+const NON_INVESTMENT_ACCOUNT_TYPES: AccountType[] = ['預金', '暗号資産取引所', 'その他'];
 
 type HoldingFormProps = {
   open: boolean;
@@ -54,6 +56,10 @@ export function HoldingForm({ open, holding, categories, onSave, onClose }: Hold
 
   const selectedCategory = categories.find((c) => c.id === categoryId);
   const isCash = selectedCategory?.assetClass === 'cash';
+  const isInvestment = selectedCategory?.assetClass === 'investment';
+  const availableAccountTypes = isInvestment ? ALL_ACCOUNT_TYPES : NON_INVESTMENT_ACCOUNT_TYPES;
+
+  useDirtyFlag('holdingForm', open);
 
   const handleSave = async () => {
     const errs = validateHoldingInput({ name, marketValue, costBasis, quantity, memo, isCash });
@@ -112,7 +118,14 @@ export function HoldingForm({ open, holding, categories, onSave, onClose }: Hold
           id="hf-cat"
           className="form-input"
           value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
+          onChange={(e) => {
+            const newCatId = e.target.value;
+            const newCat = categories.find((c) => c.id === newCatId);
+            if (newCat?.assetClass !== 'investment' && accountType === 'NISA') {
+              setAccountType('その他');
+            }
+            setCategoryId(newCatId);
+          }}
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
@@ -128,7 +141,7 @@ export function HoldingForm({ open, holding, categories, onSave, onClose }: Hold
           value={accountType}
           onChange={(e) => setAccountType(e.target.value as AccountType)}
         >
-          {ACCOUNT_TYPES.map((t) => (
+          {availableAccountTypes.map((t) => (
             <option key={t} value={t}>{ja.accountType[t]}</option>
           ))}
         </select>

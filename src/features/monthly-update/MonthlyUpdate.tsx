@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { AppData } from '../../hooks/useAppData.js';
 import { PencilIcon } from '../../components/icons/index.js';
 import type { Holding } from '../../types/index.js';
@@ -10,6 +10,7 @@ import {
   getISONow,
 } from '../../lib/formatters/index.js';
 import { normalizeIntegerInput } from '../../lib/validators/index.js';
+import { useDirtyFlag } from '../../hooks/useUnsavedChanges.js';
 import { ConfirmDialog } from '../../components/ConfirmDialog.js';
 import { ja } from '../../strings/ja.js';
 
@@ -24,6 +25,16 @@ type RowState = {
   original: number;
 };
 
+export function computeRows(holdings: Holding[], prevRows: RowState[]): RowState[] {
+  const prevMap = new Map(prevRows.map((r) => [r.holdingId, r]));
+  return holdings.map((h) => {
+    const existing = prevMap.get(h.id);
+    return existing
+      ? { ...existing, original: h.marketValue }
+      : { holdingId: h.id, value: String(h.marketValue), original: h.marketValue };
+  });
+}
+
 export function MonthlyUpdate({ data, masked }: MonthlyUpdateProps) {
   const { categories, holdings, snapshots, saveHolding, saveSnapshot } = data;
   const currentMonthKey = getMonthKeyJST();
@@ -35,7 +46,7 @@ export function MonthlyUpdate({ data, masked }: MonthlyUpdateProps) {
   }, [snapshots, currentMonthKey]);
 
   const [rows, setRows] = useState<RowState[]>(() =>
-    holdings.map((h) => ({ holdingId: h.id, value: String(h.marketValue), original: h.marketValue })),
+    computeRows(holdings, []),
   );
   const [showChangedOnly, setShowChangedOnly] = useState(false);
   const [snapshotMemo, setSnapshotMemo] = useState('');
@@ -44,9 +55,9 @@ export function MonthlyUpdate({ data, masked }: MonthlyUpdateProps) {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Reset rows when holdings change (e.g. after save)
-  useMemo(() => {
-    setRows(holdings.map((h) => ({ holdingId: h.id, value: String(h.marketValue), original: h.marketValue })));
+  // Sync rows when holdings change (e.g. after save), preserving user input for existing rows
+  useEffect(() => {
+    setRows((prev) => computeRows(holdings, prev));
   }, [holdings]);
 
   const getPrevValue = useCallback(
@@ -64,6 +75,8 @@ export function MonthlyUpdate({ data, masked }: MonthlyUpdateProps) {
       return parsed !== null && parsed !== r.original;
     }).length;
   }, [rows]);
+
+  useDirtyFlag('monthlyUpdate', changedCount > 0);
 
   const displayedRows = useMemo(() => {
     if (!showChangedOnly) return rows;
@@ -201,59 +214,63 @@ export function MonthlyUpdate({ data, masked }: MonthlyUpdateProps) {
         </label>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="data-table" style={{ fontSize: '0.82rem' }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: 'left', paddingLeft: 12 }}>資産名</th>
-              <th>前回</th>
-              <th>今回</th>
-              <th>差額</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayedRows.map((row) => {
-              const holding = holdings.find((h) => h.id === row.holdingId);
-              if (!holding) return null;
-              const cat = categories.find((c) => c.id === holding.categoryId);
-              const prevValue = getPrevValue(holding);
-              const currentParsed = normalizeIntegerInput(row.value);
-              const diff =
-                currentParsed !== null && prevValue !== null ? currentParsed - prevValue : null;
+      <div>
+        {displayedRows.map((row) => {
+          const holding = holdings.find((h) => h.id === row.holdingId);
+          if (!holding) return null;
+          const cat = categories.find((c) => c.id === holding.categoryId);
+          const prevValue = getPrevValue(holding);
+          const currentParsed = normalizeIntegerInput(row.value);
+          const diff =
+            currentParsed !== null && prevValue !== null ? currentParsed - prevValue : null;
+          const isChanged = currentParsed !== null && currentParsed !== row.original;
 
-              return (
-                <tr key={row.holdingId}>
-                  <td style={{ paddingLeft: 12 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.83rem' }}>{holding.name}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--color-text-3)' }}>
-                      <span className="color-dot" style={{ background: cat?.color, marginRight: 4 }} />
-                      {cat?.name ?? '—'}
-                    </div>
-                  </td>
-                  <td style={{ textAlign: 'right', color: 'var(--color-text-3)', fontSize: '0.78rem' }}>
-                    {prevValue !== null ? formatCurrency(prevValue, masked) : ja.monthlyUpdate.noRecord}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <input
-                      className="form-input"
-                      inputMode="numeric"
-                      value={row.value}
-                      onChange={(e) => handleValueChange(row.holdingId, e.target.value)}
-                      aria-label={`${holding.name}の評価額`}
-                      style={{ textAlign: 'right', width: 100, padding: '6px 8px', fontSize: '0.85rem' }}
-                    />
-                  </td>
-                  <td
-                    style={{ textAlign: 'right', fontSize: '0.78rem' }}
-                    className={diff !== null ? (diff > 0 ? 'diff-positive' : diff < 0 ? 'diff-negative' : '') : ''}
+          return (
+            <div key={row.holdingId} className="card" style={{ marginBottom: 8, padding: '12px 14px' }}>
+              <div className="row-between" style={{ marginBottom: 8 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {holding.name}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-3)', marginTop: 2 }}>
+                    <span className="color-dot" style={{ background: cat?.color, marginRight: 4 }} />
+                    {cat?.name ?? '—'}
+                  </div>
+                </div>
+                {diff !== null && (
+                  <div
+                    className={diff > 0 ? 'diff-positive' : diff < 0 ? 'diff-negative' : ''}
+                    style={{ fontSize: '0.8rem', textAlign: 'right', flexShrink: 0, marginLeft: 8 }}
                   >
-                    {diff !== null ? formatDiff(diff, masked) : '—'}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    {formatDiff(diff, masked)}
+                  </div>
+                )}
+              </div>
+              <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-3)', flexShrink: 0 }}>
+                  前回: {prevValue !== null ? formatCurrency(prevValue, masked) : ja.monthlyUpdate.noRecord}
+                </span>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                  <input
+                    className="form-input"
+                    inputMode="numeric"
+                    value={row.value}
+                    onChange={(e) => handleValueChange(row.holdingId, e.target.value)}
+                    aria-label={`${holding.name}の評価額`}
+                    style={{
+                      textAlign: 'right',
+                      width: '100%',
+                      maxWidth: 150,
+                      padding: '6px 8px',
+                      fontSize: '0.9rem',
+                      background: isChanged ? 'var(--brand-soft)' : undefined,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="form-group" style={{ marginTop: 16 }}>

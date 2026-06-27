@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { SVGProps } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import type { TabId } from './types/index.js';
 import { useAppData } from './hooks/useAppData.js';
 import { useMask } from './hooks/useMask.js';
+import { hasUnsavedChanges } from './hooks/useUnsavedChanges.js';
+import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { Dashboard } from './features/dashboard/Dashboard.js';
 import { Holdings } from './features/holdings/Holdings.js';
 import { MonthlyUpdate } from './features/monthly-update/MonthlyUpdate.js';
@@ -54,6 +56,16 @@ export default function App() {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW();
+
+  const [updatePending, setUpdatePending] = useState(false);
+
+  const handleUpdateClick = useCallback(() => {
+    if (hasUnsavedChanges()) {
+      setUpdatePending(true);
+    } else {
+      updateServiceWorker(true);
+    }
+  }, [updateServiceWorker]);
 
   useEffect(() => {
     try {
@@ -106,13 +118,22 @@ export default function App() {
           <button
             className="btn btn-sm"
             style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}
-            onClick={() => updateServiceWorker(true)}
+            onClick={handleUpdateClick}
             aria-label={ja.pwa.updateButton}
           >
             {ja.pwa.updateButton}
           </button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={updatePending}
+        title={ja.pwa.updateConfirmTitle}
+        message={ja.pwa.updateConfirmMessage}
+        confirmLabel={ja.pwa.updateButton}
+        onConfirm={() => { setUpdatePending(false); updateServiceWorker(true); }}
+        onCancel={() => setUpdatePending(false)}
+      />
 
       {/* App header */}
       <header

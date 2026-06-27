@@ -25,6 +25,7 @@ import {
   formatDiffPercent,
   getMonthKeyJST,
   getTodayJST,
+  getJstMonthFromIso,
 } from '../../lib/formatters/index.js';
 import { ja } from '../../strings/ja.js';
 
@@ -64,7 +65,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
     () => calcTopHoldings(holdings, categories, 5),
     [holdings, categories],
   );
-  const nisaValue = useMemo(() => calcNisaValue(holdings), [holdings]);
+  const nisaValue = useMemo(() => calcNisaValue(holdings, categories), [holdings, categories]);
   const nisaRatio = useMemo(
     () => calcNisaRatio(nisaValue, assetClass.investment),
     [nisaValue, assetClass.investment],
@@ -101,9 +102,8 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
   // Checklist
   const holdingsUpdatedThisMonth = useMemo(() => {
     if (holdings.length === 0) return false;
-    const monthStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-    return holdings.some((h) => h.updatedAt.startsWith(monthStr));
-  }, [holdings, currentYear, currentMonth]);
+    return holdings.some((h) => getJstMonthFromIso(h.updatedAt) === currentMonthKey);
+  }, [holdings, currentMonthKey]);
 
   const snapshotSavedThisMonth = !!currentMonthSnapshot;
   const backupDoneThisMonth = useMemo(() => {
