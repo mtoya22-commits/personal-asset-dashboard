@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import type { AppData } from '../../hooks/useAppData.js';
+import { PencilIcon } from '../../components/icons/index.js';
 import type { Holding } from '../../types/index.js';
 import { buildSnapshot } from '../../lib/calculations/index.js';
 import {
@@ -163,7 +164,7 @@ export function MonthlyUpdate({ data, masked }: MonthlyUpdateProps) {
           {ja.monthlyUpdate.title.replace('月', monthLabel)}
         </div>
         <div className="empty-state">
-          <div className="empty-state-icon">📋</div>
+          <div className="empty-state-icon"><PencilIcon size={48} /></div>
           <div className="empty-state-text">{ja.monthlyUpdate.empty}</div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import type { AppData } from '../../hooks/useAppData.js';
 import type { AssetCategory, AppSettings, BackupFile, RecoveryBackup } from '../../types/index.js';
+import { DownloadIcon, UploadIcon, TrashIcon } from '../../components/icons/index.js';
 import { validateBackupFile, asTypedBackupFile } from '../../lib/validators/index.js';
 import {
   buildMonthlySummaryCsv,
@@ -324,6 +325,7 @@ export function Settings({ data, masked }: SettingsProps) {
         )}
         <div className="form-hint" style={{ marginBottom: 12 }}>{ja.settings.backupNote}</div>
         <button className="btn btn-primary btn-sm" onClick={handleExport} aria-label={ja.settings.exportJson}>
+          <DownloadIcon size={15} />
           {ja.settings.exportJson}
         </button>
       </div>
@@ -346,6 +348,7 @@ export function Settings({ data, masked }: SettingsProps) {
           onClick={() => fileInputRef.current?.click()}
           aria-label={ja.settings.importJson}
         >
+          <UploadIcon size={15} />
           {ja.settings.importJson}
         </button>
         <div className="form-hint" style={{ marginTop: 8 }}>
@@ -358,6 +361,7 @@ export function Settings({ data, masked }: SettingsProps) {
         <div className="card-title">CSVエクスポート</div>
         {csvSuccess && <div className="notice notice-info" style={{ marginBottom: 8 }}>{csvSuccess}</div>}
         <button className="btn btn-secondary btn-sm" onClick={handleCsvExport} aria-label={ja.settings.exportCsv}>
+          <DownloadIcon size={15} />
           {ja.settings.exportCsv}
         </button>
         <div className="form-hint" style={{ marginTop: 8 }}>
@@ -401,6 +405,7 @@ export function Settings({ data, masked }: SettingsProps) {
           onClick={() => { setDeleteOpen(true); setDeleteInput(''); }}
           aria-label={ja.deleteAll.title}
         >
+          <TrashIcon size={15} />
           {ja.deleteAll.title}
         </button>
       </div>

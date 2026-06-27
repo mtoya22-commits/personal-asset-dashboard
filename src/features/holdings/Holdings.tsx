@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { AppData } from '../../hooks/useAppData.js';
 import type { Holding } from '../../types/index.js';
+import { BriefcaseIcon, PlusIcon, EditIcon, TrashIcon } from '../../components/icons/index.js';
 import { formatCurrency, formatDate } from '../../lib/formatters/index.js';
 import { ConfirmDialog } from '../../components/ConfirmDialog.js';
 import { HoldingForm } from './HoldingForm.js';
@@ -83,7 +84,8 @@ export function Holdings({ data, masked }: HoldingsProps) {
           onClick={() => { setEditHolding(undefined); setFormOpen(true); }}
           aria-label={ja.holdings.addHolding}
         >
-          + 追加
+          <PlusIcon size={15} />
+          追加
         </button>
       </div>
 
@@ -136,7 +138,7 @@ export function Holdings({ data, masked }: HoldingsProps) {
       {/* Empty state */}
       {holdings.length === 0 && (
         <div className="empty-state">
-          <div className="empty-state-icon">📊</div>
+          <div className="empty-state-icon"><BriefcaseIcon size={48} /></div>
           <div className="empty-state-text">{ja.holdings.empty}</div>
         </div>
       )}
@@ -240,14 +242,16 @@ function HoldingRow({
           onClick={() => onEdit(holding)}
           aria-label={`${holding.name}を編集`}
         >
+          <EditIcon size={14} />
           編集
         </button>
         <button
           className="btn btn-sm"
-          style={{ color: 'var(--color-down)' }}
+          style={{ color: 'var(--negative)' }}
           onClick={() => onDelete(holding.id)}
           aria-label={`${holding.name}を削除`}
         >
+          <TrashIcon size={14} />
           削除
         </button>
       </div>

@@ -3,6 +3,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
+import { PieChartIcon } from '../../components/icons/index.js';
 import type { AppData } from '../../hooks/useAppData.js';
 import {
   calcTotalAssets,
@@ -54,7 +55,7 @@ export function Allocation({ data, masked }: AllocationProps) {
     return (
       <div className="screen">
         <div className="empty-state">
-          <div className="empty-state-icon">📈</div>
+          <div className="empty-state-icon"><PieChartIcon size={48} /></div>
           <div className="empty-state-text">保有資産を追加すると配分分析が表示されます</div>
         </div>
       </div>

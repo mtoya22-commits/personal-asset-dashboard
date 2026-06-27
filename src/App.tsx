@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { SVGProps } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import type { TabId } from './types/index.js';
 import { useAppData } from './hooks/useAppData.js';
@@ -8,16 +9,33 @@ import { Holdings } from './features/holdings/Holdings.js';
 import { MonthlyUpdate } from './features/monthly-update/MonthlyUpdate.js';
 import { Allocation } from './features/allocation/Allocation.js';
 import { HistoryAndSettings } from './features/snapshots/HistoryAndSettings.js';
+import {
+  EyeIcon,
+  EyeOffIcon,
+  GridIcon,
+  BriefcaseIcon,
+  PencilIcon,
+  PieChartIcon,
+  ClockIcon,
+} from './components/icons/index.js';
 import { ja } from './strings/ja.js';
 
 const LAST_TAB_KEY = 'pad:last-viewed-tab';
 
-const NAV_ITEMS: { id: TabId; label: string; icon: string }[] = [
-  { id: 'dashboard', label: ja.tabs.dashboard, icon: '📊' },
-  { id: 'holdings', label: ja.tabs.holdings, icon: '💼' },
-  { id: 'monthly-update', label: ja.tabs.monthlyUpdate, icon: '📝' },
-  { id: 'allocation', label: ja.tabs.allocation, icon: '🥧' },
-  { id: 'history', label: ja.tabs.history, icon: '📅' },
+type IconComponent = (props: SVGProps<SVGSVGElement> & { size?: number }) => React.ReactElement;
+
+type NavItem = {
+  id: TabId;
+  label: string;
+  Icon: IconComponent;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { id: 'dashboard', label: '概要', Icon: GridIcon },
+  { id: 'holdings', label: '資産', Icon: BriefcaseIcon },
+  { id: 'monthly-update', label: '更新', Icon: PencilIcon },
+  { id: 'allocation', label: '配分', Icon: PieChartIcon },
+  { id: 'history', label: '履歴', Icon: ClockIcon },
 ];
 
 export default function App() {
@@ -51,7 +69,7 @@ export default function App() {
           alignItems: 'center',
           justifyContent: 'center',
           height: '100dvh',
-          color: 'var(--color-text-3)',
+          color: 'var(--text-subtle)',
         }}
       >
         {ja.common.loading}
@@ -72,8 +90,8 @@ export default function App() {
           gap: 12,
         }}
       >
-        <div style={{ color: 'var(--color-down)' }}>{ja.common.error}</div>
-        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-3)' }}>{data.error}</div>
+        <div style={{ color: 'var(--negative)' }}>{ja.common.error}</div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-subtle)' }}>{data.error}</div>
         <button className="btn btn-primary" onClick={data.reload}>再読み込み</button>
       </div>
     );
@@ -103,8 +121,8 @@ export default function App() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '10px 16px',
-          background: 'var(--color-surface)',
-          borderBottom: '1px solid var(--color-border)',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
           position: 'sticky',
           top: needRefresh ? 44 : 0,
           zIndex: 40,
@@ -114,7 +132,7 @@ export default function App() {
           style={{
             fontSize: '1rem',
             fontWeight: 700,
-            color: 'var(--color-primary)',
+            color: 'var(--brand)',
           }}
         >
           {ja.appName}
@@ -125,7 +143,7 @@ export default function App() {
           aria-label={masked ? '金額を表示' : '金額を隠す'}
           title={masked ? '金額を表示' : '金額を隠す'}
         >
-          {masked ? '👁️' : '🙈'}
+          {masked ? <EyeIcon size={20} /> : <EyeOffIcon size={20} />}
         </button>
       </header>
 
@@ -147,7 +165,7 @@ export default function App() {
 
       {/* Bottom navigation */}
       <nav className="nav" aria-label="メインナビゲーション">
-        {NAV_ITEMS.map(({ id, label, icon }) => (
+        {NAV_ITEMS.map(({ id, label, Icon }) => (
           <button
             key={id}
             className={`nav-item${tab === id ? ' active' : ''}`}
@@ -155,7 +173,7 @@ export default function App() {
             aria-label={label}
             aria-current={tab === id ? 'page' : undefined}
           >
-            <span className="nav-icon" aria-hidden="true">{icon}</span>
+            <Icon size={22} />
             <span>{label}</span>
           </button>
         ))}

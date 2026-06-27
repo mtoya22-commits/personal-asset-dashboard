@@ -3,6 +3,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import type { AppData } from '../../hooks/useAppData.js';
+import { CheckIcon } from '../../components/icons/index.js';
 import {
   calcTotalAssets,
   calcCategoryBreakdown,
@@ -395,7 +396,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
         ].map(({ label, done }) => (
           <div key={label} className="checklist-item">
             <div className={`check-icon ${done ? 'done' : 'pending'}`}>
-              {done ? '✓' : '○'}
+              {done && <CheckIcon size={12} />}
             </div>
             <span style={{ fontSize: '0.88rem', color: done ? 'var(--color-text)' : 'var(--color-text-2)' }}>
               {label}

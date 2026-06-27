@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
+import { ClockIcon, TrashIcon, ChevronRightIcon } from '../../components/icons/index.js';
 import type { AppData } from '../../hooks/useAppData.js';
 import type { MonthlySnapshot } from '../../types/index.js';
 import { formatCurrency, formatDate, formatDiff, formatDiffPercent } from '../../lib/formatters/index.js';
@@ -69,7 +70,7 @@ export function SnapshotHistory({ data, masked }: SnapshotHistoryProps) {
       {/* Snapshot list */}
       {sorted.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">📅</div>
+          <div className="empty-state-icon"><ClockIcon size={48} /></div>
           <div className="empty-state-text">{ja.history.noHistory}</div>
         </div>
       ) : (
@@ -110,13 +111,15 @@ export function SnapshotHistory({ data, masked }: SnapshotHistoryProps) {
                   aria-label={`${snap.monthKey}の詳細`}
                 >
                   詳細
+                  <ChevronRightIcon size={14} />
                 </button>
                 <button
                   className="btn btn-sm"
-                  style={{ color: 'var(--color-down)' }}
+                  style={{ color: 'var(--negative)' }}
                   onClick={() => setDeleteId(snap.id)}
                   aria-label={`${snap.monthKey}の月次記録を削除`}
                 >
+                  <TrashIcon size={14} />
                   削除
                 </button>
               </div>
