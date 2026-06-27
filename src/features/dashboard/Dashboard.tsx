@@ -324,7 +324,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
               </PieChart>
             </ResponsiveContainer>
           )}
-          <table className="data-table" aria-label={ja.dashboard.categoryChart}>
+          <table className="data-table data-table-3col" aria-label={ja.dashboard.categoryChart}>
             <thead>
               <tr>
                 <th>カテゴリ</th>
@@ -362,7 +362,7 @@ export function Dashboard({ data, masked, onGoToSettings, onGoToMonthlyUpdate }:
       {topHoldings.length > 0 && (
         <div className="card">
           <div className="card-title">{ja.dashboard.topHoldings}</div>
-          <table className="data-table" aria-label={ja.dashboard.topHoldings}>
+          <table className="data-table data-table-3col" aria-label={ja.dashboard.topHoldings}>
             <thead>
               <tr>
                 <th>資産名</th>

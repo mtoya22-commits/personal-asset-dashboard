@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Holding, AssetCategory, AccountType } from '../../types/index.js';
 import { validateHoldingInput, normalizeIntegerInput, normalizeNumericInput } from '../../lib/validators/index.js';
 import { getISONow } from '../../lib/formatters/index.js';
@@ -17,6 +17,11 @@ type HoldingFormProps = {
   onClose: () => void;
 };
 
+type InitialValues = {
+  name: string; categoryId: string; accountType: AccountType;
+  marketValue: string; costBasis: string; quantity: string; memo: string;
+};
+
 export function HoldingForm({ open, holding, categories, onSave, onClose }: HoldingFormProps) {
   const isEdit = !!holding;
   const defaultCategoryId = categories[0]?.id ?? '';
@@ -31,26 +36,30 @@ export function HoldingForm({ open, holding, categories, onSave, onClose }: Hold
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  const initialRef = useRef<InitialValues | null>(null);
+
   useEffect(() => {
     if (open) {
-      if (holding) {
-        setName(holding.name);
-        setCategoryId(holding.categoryId);
-        setAccountType(holding.accountType);
-        setMarketValue(String(holding.marketValue));
-        setCostBasis(holding.costBasis !== undefined ? String(holding.costBasis) : '');
-        setQuantity(holding.quantity !== undefined ? String(holding.quantity) : '');
-        setMemo(holding.memo ?? '');
-      } else {
-        setName('');
-        setCategoryId(defaultCategoryId);
-        setAccountType('その他');
-        setMarketValue('');
-        setCostBasis('');
-        setQuantity('');
-        setMemo('');
-      }
+      const initial: InitialValues = {
+        name: holding?.name ?? '',
+        categoryId: holding?.categoryId ?? defaultCategoryId,
+        accountType: holding?.accountType ?? 'その他',
+        marketValue: holding ? String(holding.marketValue) : '',
+        costBasis: holding?.costBasis !== undefined ? String(holding.costBasis) : '',
+        quantity: holding?.quantity !== undefined ? String(holding.quantity) : '',
+        memo: holding?.memo ?? '',
+      };
+      initialRef.current = initial;
+      setName(initial.name);
+      setCategoryId(initial.categoryId);
+      setAccountType(initial.accountType);
+      setMarketValue(initial.marketValue);
+      setCostBasis(initial.costBasis);
+      setQuantity(initial.quantity);
+      setMemo(initial.memo);
       setErrors({});
+    } else {
+      initialRef.current = null;
     }
   }, [open, holding, defaultCategoryId]);
 
@@ -59,7 +68,16 @@ export function HoldingForm({ open, holding, categories, onSave, onClose }: Hold
   const isInvestment = selectedCategory?.assetClass === 'investment';
   const availableAccountTypes = isInvestment ? ALL_ACCOUNT_TYPES : NON_INVESTMENT_ACCOUNT_TYPES;
 
-  useDirtyFlag('holdingForm', open);
+  const isFormDirty = open && initialRef.current !== null && (
+    name !== initialRef.current.name ||
+    categoryId !== initialRef.current.categoryId ||
+    accountType !== initialRef.current.accountType ||
+    marketValue !== initialRef.current.marketValue ||
+    costBasis !== initialRef.current.costBasis ||
+    quantity !== initialRef.current.quantity ||
+    memo !== initialRef.current.memo
+  );
+  useDirtyFlag('holdingForm', isFormDirty);
 
   const handleSave = async () => {
     const errs = validateHoldingInput({ name, marketValue, costBasis, quantity, memo, isCash });
