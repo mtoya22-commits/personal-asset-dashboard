@@ -246,7 +246,7 @@ function HoldingRow({
           編集
         </button>
         <button
-          className="btn btn-sm"
+          className="btn btn-ghost btn-sm"
           style={{ color: 'var(--negative)' }}
           onClick={() => onDelete(holding.id)}
           aria-label={`${holding.name}を削除`}

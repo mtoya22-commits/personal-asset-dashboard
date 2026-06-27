@@ -153,7 +153,7 @@ export default function App() {
         <h1
           style={{
             fontSize: '1rem',
-            fontWeight: 700,
+            fontWeight: 600,
             color: 'var(--brand)',
           }}
         >
@@ -162,8 +162,8 @@ export default function App() {
         <button
           className="mask-toggle"
           onClick={toggleMask}
-          aria-label={masked ? '金額を表示' : '金額を隠す'}
-          title={masked ? '金額を表示' : '金額を隠す'}
+          aria-label={masked ? '金額を表示する' : '金額を隠す'}
+          title={masked ? '金額を表示する' : '金額を隠す'}
         >
           {masked ? <EyeIcon size={20} /> : <EyeOffIcon size={20} />}
         </button>

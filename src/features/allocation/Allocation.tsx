@@ -3,6 +3,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
+
 import { PieChartIcon } from '../../components/icons/index.js';
 import type { AppData } from '../../hooks/useAppData.js';
 import {
@@ -25,6 +26,24 @@ import { ja } from '../../strings/ja.js';
 type AllocationProps = {
   data: AppData;
   masked: boolean;
+};
+
+const MaskedTooltip = ({
+  active,
+  payload,
+  masked,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number }>;
+  masked: boolean;
+}) => {
+  if (!active || !payload?.length || masked) return null;
+  return (
+    <div className="chart-tooltip">
+      <div className="chart-tooltip-label">{payload[0].name}</div>
+      <div className="chart-tooltip-value">{formatCurrency(payload[0].value ?? 0, false)}</div>
+    </div>
+  );
 };
 
 export function Allocation({ data, masked }: AllocationProps) {
@@ -85,7 +104,7 @@ export function Allocation({ data, masked }: AllocationProps) {
                   <Cell key={i} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v: number) => [formatCurrency(v), '']} />
+              <Tooltip content={(props) => <MaskedTooltip active={props.active} payload={props.payload as Array<{ name?: string; value?: number }>} masked={masked} />} />
             </PieChart>
           </ResponsiveContainer>
         )}
@@ -109,7 +128,7 @@ export function Allocation({ data, masked }: AllocationProps) {
                       <span className="color-dot" style={{ background: cat?.color, marginRight: 6 }} />
                       {c.categoryName}
                     </td>
-                    <td style={{ color: 'var(--color-text-3)', textAlign: 'left' }}>
+                    <td style={{ color: 'var(--text-subtle)', textAlign: 'left' }}>
                       {ja.assetClass[c.assetClass]}
                     </td>
                     <td>{formatCurrency(c.value, masked)}</td>
@@ -187,10 +206,10 @@ export function Allocation({ data, masked }: AllocationProps) {
                 layout="vertical"
                 margin={{ left: 8, right: 8 }}
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                 <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => [formatCurrency(v), '']} />
+                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11, fill: 'var(--text-subtle)' }} axisLine={false} tickLine={false} />
+                <Tooltip content={(props) => <MaskedTooltip active={props.active} payload={props.payload as Array<{ name?: string; value?: number }>} masked={masked} />} />
                 <Bar dataKey="value">
                   {topCats.map((c) => {
                     const cat = categories.find((x) => x.id === c.categoryId);
@@ -242,12 +261,12 @@ export function Allocation({ data, masked }: AllocationProps) {
       <div className="card">
         <div className="card-title">{ja.unrealizedGains.label}</div>
         {unrealized.entries.length === 0 ? (
-          <div style={{ color: 'var(--color-text-3)', fontSize: '0.88rem' }}>
+          <div style={{ color: 'var(--text-subtle)', fontSize: '0.88rem' }}>
             {ja.unrealizedGains.noTarget}
           </div>
         ) : (
           <>
-            <div style={{ fontSize: '0.78rem', color: 'var(--color-text-3)', marginBottom: 8 }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', marginBottom: 8 }}>
               {ja.unrealizedGains.scope}
             </div>
             <table className="data-table data-table-3col" aria-label={ja.allocation.unrealizedGains}>
@@ -283,7 +302,7 @@ export function Allocation({ data, masked }: AllocationProps) {
                 </tr>
               </tbody>
             </table>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-3)', marginTop: 8 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginTop: 8 }}>
               {ja.unrealizedGains.targetValue}: {formatCurrency(unrealized.targetMarketValue, masked)}
               {' / '}
               {ja.unrealizedGains.investmentTotal}: {formatCurrency(unrealized.investmentCryptoTotal, masked)}
