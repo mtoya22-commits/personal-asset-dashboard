@@ -364,7 +364,6 @@ select.form-input {
 /* ──────────────────────── Tables ──────────────────────── */
 .data-table {
   width: 100%;
-  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.88rem;
 }
@@ -383,8 +382,17 @@ select.form-input {
   border-bottom: 1px solid var(--surface-muted);
   vertical-align: top;
   font-variant-numeric: tabular-nums;
+}
+
+.data-table td:first-child {
   overflow-wrap: break-word;
   word-break: break-word;
+}
+
+.data-table td:not(:first-child) {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .data-table td:last-child,

@@ -181,8 +181,9 @@ export const ja = {
   },
   pwa: {
     updateAvailable: '新しいバージョンがあります',
-    updateButton: '今すぐ更新',
-    updateConfirmTitle: 'アップデートの確認',
+    updateButton: '変更を破棄して更新',
+    updateCancelLabel: '戻って保存する',
+    updateConfirmTitle: '未保存の変更があります',
     updateConfirmMessage: '未保存の入力があります。今すぐ更新すると入力内容が失われます。続けますか？',
     unsavedWarning: '未保存の入力があります。更新前に保存または破棄してください。',
   },
