@@ -1,7 +1,7 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import type { AppData } from '../../hooks/useAppData.js';
 import type { AssetCategory, AppSettings, BackupFile, RecoveryBackup } from '../../types/index.js';
-import { useDirtyFlag } from '../../hooks/useUnsavedChanges.js';
+import { useDirtyFlag, resetDirtyState } from '../../hooks/useUnsavedChanges.js';
 import { DownloadIcon, UploadIcon, TrashIcon } from '../../components/icons/index.js';
 import { validateBackupFile, asTypedBackupFile } from '../../lib/validators/index.js';
 import {
@@ -27,6 +27,7 @@ type SettingsProps = {
 
 export function Settings({ data, masked }: SettingsProps) {
   const { categories, holdings, snapshots, settings, saveSettings, saveCategories, importData, clearAllData } = data;
+  const { dataVersion } = data;
 
   const [fireTarget, setFireTarget] = useState(String(settings.fireTargetAmount || ''));
   const [maskOnLaunch, setMaskOnLaunch] = useState(settings.maskAmountsOnLaunch);
@@ -52,6 +53,17 @@ export function Settings({ data, masked }: SettingsProps) {
   const [deleteInput, setDeleteInput] = useState('');
 
   const [csvSuccess, setCsvSuccess] = useState('');
+
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [copyJson, setCopyJson] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  // Sync local state after import/restore via dataVersion
+  useEffect(() => {
+    setFireTarget(String(settings.fireTargetAmount || ''));
+    setMaskOnLaunch(settings.maskAmountsOnLaunch);
+    setSettingsSaved(false);
+  }, [dataVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ──────────────────────────────── Settings save
   const handleSaveSettings = async () => {
@@ -133,6 +145,27 @@ export function Settings({ data, masked }: SettingsProps) {
       }
     }
 
+    // 3. Clipboard
+    if (!exported) {
+      try {
+        await navigator.clipboard.writeText(json);
+        setCopyJson(json);
+        setCopyModalOpen(true);
+        setCopySuccess(true);
+        return; // do NOT update timestamp
+      } catch {
+        // fall through
+      }
+    }
+
+    // 4. Manual textarea modal
+    if (!exported) {
+      setCopyJson(json);
+      setCopySuccess(false);
+      setCopyModalOpen(true);
+      return; // do NOT update timestamp
+    }
+
     // Update backup timestamp only on successful export
     if (exported) {
       const now = getISONow();
@@ -191,6 +224,7 @@ export function Settings({ data, masked }: SettingsProps) {
       setImportOpen(false);
       setImportFile(null);
       setImportSuccess(ja.import.success);
+      resetDirtyState();
       setTimeout(() => setImportSuccess(''), 3000);
     } catch (e) {
       setImportError(e instanceof Error ? e.message : ja.import.error);
@@ -229,6 +263,7 @@ export function Settings({ data, masked }: SettingsProps) {
     setRestoreConfirmOpen(false);
     setRestoreOpen(false);
     setRestoreTarget(null);
+    resetDirtyState();
   };
 
   // ──────────────────────────────── Delete all
@@ -249,7 +284,14 @@ export function Settings({ data, masked }: SettingsProps) {
       maskOnLaunch !== settings.maskAmountsOnLaunch,
     [fireTarget, settings.fireTargetAmount, maskOnLaunch, settings.maskAmountsOnLaunch],
   );
-  useDirtyFlag('settings', settingsChanged || !!editCategoryId);
+
+  const catOriginal = editCategoryId ? categories.find((c) => c.id === editCategoryId) : null;
+  const catChanged = catOriginal !== null && catOriginal !== undefined && (
+    catName !== catOriginal.name ||
+    catColor !== catOriginal.color ||
+    catSortOrder !== catOriginal.sortOrder
+  );
+  useDirtyFlag('settings', settingsChanged || catChanged);
 
   const lastBackupDays = settings.lastBackupExportInitiatedAt
     ? Math.floor((Date.now() - new Date(settings.lastBackupExportInitiatedAt).getTime()) / (86400000))
@@ -285,7 +327,7 @@ export function Settings({ data, masked }: SettingsProps) {
         </label>
         <div className="form-hint">{ja.settings.maskNote}</div>
         <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={handleSaveSettings}>
-          {settingsSaved ? '保存しました ✓' : ja.settings.save}
+          {settingsSaved ? '保存しました' : ja.settings.save}
         </button>
       </div>
 
@@ -480,7 +522,8 @@ export function Settings({ data, masked }: SettingsProps) {
         {importFile && (
           <>
             <div className="notice notice-warn" style={{ marginBottom: 12 }}>
-              {ja.import.warning}
+              {ja.import.warning}<br />
+              現在のデータと編集中の設定内容は置き換えられます。
             </div>
             <div style={{ marginBottom: 12, fontSize: '0.88rem' }}>
               <div style={{ fontWeight: 600, marginBottom: 6 }}>取込予定</div>
@@ -539,7 +582,7 @@ export function Settings({ data, masked }: SettingsProps) {
       <ConfirmDialog
         open={restoreConfirmOpen}
         title={ja.restore.title}
-        message={ja.restore.warning}
+        message={`${ja.restore.warning}\n現在のデータと編集中の設定内容は置き換えられます。`}
         confirmLabel={ja.restore.confirmButton}
         cancelLabel={ja.restore.cancelButton}
         onConfirm={handleRestoreConfirm}
@@ -578,6 +621,48 @@ export function Settings({ data, masked }: SettingsProps) {
           </button>
           <button className="btn btn-secondary" onClick={() => setDeleteOpen(false)}>
             {ja.deleteAll.cancelButton}
+          </button>
+        </div>
+      </Dialog>
+
+      {/* JSON copy fallback modal */}
+      <Dialog open={copyModalOpen} onClose={() => { setCopyModalOpen(false); setCopySuccess(false); }} title="バックアップJSONをコピー" center>
+        <div className="notice notice-warn" style={{ marginBottom: 12 }}>
+          この操作はクリップボードに金融情報を保存します。貼り付け先・共有先は利用者自身で管理してください。
+        </div>
+        {copySuccess && (
+          <div className="notice notice-info" style={{ marginBottom: 12 }}>クリップボードにコピーしました</div>
+        )}
+        {!copySuccess && (
+          <>
+            <p style={{ fontSize: '0.85rem', marginBottom: 8 }}>以下のJSONを全選択してコピーしてください。</p>
+            <textarea
+              readOnly
+              value={copyJson}
+              rows={8}
+              className="form-input"
+              style={{ fontFamily: 'monospace', fontSize: '0.72rem', resize: 'vertical' }}
+              onFocus={(e) => e.target.select()}
+              aria-label="バックアップJSON"
+            />
+          </>
+        )}
+        <div className="dialog-actions" style={{ marginTop: 12 }}>
+          {!copySuccess && (
+            <button
+              className="btn btn-primary"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(copyJson);
+                  setCopySuccess(true);
+                } catch { /* ignore */ }
+              }}
+            >
+              コピーする
+            </button>
+          )}
+          <button className="btn btn-secondary" onClick={() => { setCopyModalOpen(false); setCopySuccess(false); }}>
+            閉じる
           </button>
         </div>
       </Dialog>

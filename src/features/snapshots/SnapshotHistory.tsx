@@ -181,7 +181,7 @@ function SnapshotDetail({ snap, masked }: { snap: MonthlySnapshot; masked: boole
 
       <div>
         <div className="card-title">保有資産</div>
-        <table className="data-table">
+        <table className="data-table data-table-3col">
           <thead>
             <tr><th>資産名</th><th>カテゴリ</th><th>評価額</th></tr>
           </thead>

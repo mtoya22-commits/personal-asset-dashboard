@@ -89,7 +89,7 @@ export function Allocation({ data, masked }: AllocationProps) {
             </PieChart>
           </ResponsiveContainer>
         )}
-        <table className="data-table" aria-label={ja.allocation.categoryTable}>
+        <table className="data-table data-table-4col" aria-label={ja.allocation.categoryTable}>
           <thead>
             <tr>
               <th>カテゴリ</th>
@@ -124,7 +124,7 @@ export function Allocation({ data, masked }: AllocationProps) {
       {/* Asset class breakdown */}
       <div className="card">
         <div className="card-title">{ja.allocation.assetClassBreakdown}</div>
-        <table className="data-table" aria-label={ja.allocation.assetClassBreakdown}>
+        <table className="data-table data-table-3col" aria-label={ja.allocation.assetClassBreakdown}>
           <thead>
             <tr>
               <th>大分類</th>
@@ -153,7 +153,7 @@ export function Allocation({ data, masked }: AllocationProps) {
       {/* Account type breakdown */}
       <div className="card">
         <div className="card-title">{ja.allocation.accountTypeTable}</div>
-        <table className="data-table" aria-label={ja.allocation.accountTypeTable}>
+        <table className="data-table data-table-3col" aria-label={ja.allocation.accountTypeTable}>
           <thead>
             <tr>
               <th>口座種別</th>
@@ -200,7 +200,7 @@ export function Allocation({ data, masked }: AllocationProps) {
               </BarChart>
             </ResponsiveContainer>
           )}
-          <table className="data-table" aria-label={ja.allocation.topCategories}>
+          <table className="data-table data-table-3col" aria-label={ja.allocation.topCategories}>
             <thead>
               <tr><th>カテゴリ</th><th>評価額</th><th>比率</th></tr>
             </thead>
@@ -221,7 +221,7 @@ export function Allocation({ data, masked }: AllocationProps) {
       {topHoldings.length > 0 && (
         <div className="card">
           <div className="card-title">{ja.allocation.topHoldings}</div>
-          <table className="data-table" aria-label={ja.allocation.topHoldings}>
+          <table className="data-table data-table-3col" aria-label={ja.allocation.topHoldings}>
             <thead>
               <tr><th>資産名</th><th>評価額</th><th>比率</th></tr>
             </thead>
@@ -250,7 +250,7 @@ export function Allocation({ data, masked }: AllocationProps) {
             <div style={{ fontSize: '0.78rem', color: 'var(--color-text-3)', marginBottom: 8 }}>
               {ja.unrealizedGains.scope}
             </div>
-            <table className="data-table" aria-label={ja.allocation.unrealizedGains}>
+            <table className="data-table data-table-3col" aria-label={ja.allocation.unrealizedGains}>
               <thead>
                 <tr>
                   <th>資産名</th>

@@ -21,6 +21,7 @@ export type AppData = {
   holdings: Holding[];
   snapshots: MonthlySnapshot[];
   settings: AppSettings;
+  dataVersion: number;
   loading: boolean;
   error: string | null;
   reload: () => Promise<void>;
@@ -44,6 +45,7 @@ export function useAppData(): AppData {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [snapshots, setSnapshots] = useState<MonthlySnapshot[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [dataVersion, setDataVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -126,6 +128,7 @@ export function useAppData(): AppData {
       setHoldings(data.holdings);
       setSnapshots([...data.snapshots].sort((a, b) => b.monthKey.localeCompare(a.monthKey)));
       setSettings(data.settings);
+      setDataVersion((v) => v + 1);
     },
     [],
   );
@@ -137,6 +140,7 @@ export function useAppData(): AppData {
     setHoldings([]);
     setSnapshots([]);
     setSettings(DEFAULT_SETTINGS);
+    setDataVersion((v) => v + 1);
   }, []);
 
   return {
@@ -144,6 +148,7 @@ export function useAppData(): AppData {
     holdings,
     snapshots,
     settings,
+    dataVersion,
     loading,
     error,
     reload,
