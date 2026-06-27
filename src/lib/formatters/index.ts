@@ -21,12 +21,27 @@ export function formatPercent(value: number, digits = 1): string {
   return `${value.toFixed(digits)}%`;
 }
 
-export function formatDate(isoString: string): string {
-  const d = new Date(isoString);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+export function formatDate(dateStr: string): string {
+  // YYYY-MM-DD: parse directly to avoid UTC midnight offset
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (ymd) return `${ymd[1]}/${ymd[2]}/${ymd[3]}`;
+  // ISO datetime: convert to JST before formatting
+  const utcDate = new Date(dateStr);
+  const jstStr = utcDate.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
+  const jstDate = new Date(jstStr);
+  const y = jstDate.getFullYear();
+  const m = String(jstDate.getMonth() + 1).padStart(2, '0');
+  const day = String(jstDate.getDate()).padStart(2, '0');
   return `${y}/${m}/${day}`;
+}
+
+export function getJstMonthFromIso(isoString: string): string {
+  const utcDate = new Date(isoString);
+  const jstStr = utcDate.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
+  const jstDate = new Date(jstStr);
+  const y = jstDate.getFullYear();
+  const m = String(jstDate.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
 }
 
 export function formatDateFromMonthKey(monthKey: string): string {

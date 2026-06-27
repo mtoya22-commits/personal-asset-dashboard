@@ -48,8 +48,13 @@ export function validateBackupFile(raw: unknown): ValidationResult {
   const catResult = validateCategories(obj.categories as unknown[]);
   if (!catResult.ok) return catResult;
 
+  const validCatIds = new Set((obj.categories as Array<{ id: string }>).map((c) => c.id));
+  const catAssetClassMap = new Map(
+    (obj.categories as Array<{ id: string; assetClass: string }>).map((c) => [c.id, c.assetClass]),
+  );
+
   // Validate holdings
-  const holdResult = validateHoldings(obj.holdings as unknown[]);
+  const holdResult = validateHoldings(obj.holdings as unknown[], validCatIds, catAssetClassMap);
   if (!holdResult.ok) return holdResult;
 
   // Validate snapshots
@@ -101,7 +106,11 @@ function validateCategories(cats: unknown[]): ValidationResult {
   return { ok: true };
 }
 
-function validateHoldings(holdings: unknown[]): ValidationResult {
+function validateHoldings(
+  holdings: unknown[],
+  validCatIds: Set<string>,
+  catAssetClassMap: Map<string, string>,
+): ValidationResult {
   const ids = new Set<string>();
   for (const h of holdings) {
     if (typeof h !== 'object' || h === null) {
@@ -118,6 +127,9 @@ function validateHoldings(holdings: unknown[]): ValidationResult {
     if (typeof holding.name !== 'string' || !holding.name) {
       return { ok: false, error: `資産名が不正です: ${holding.id}` };
     }
+    if (typeof holding.categoryId !== 'string' || !validCatIds.has(holding.categoryId)) {
+      return { ok: false, error: `保有資産「${holding.name}」のカテゴリIDが存在しません: ${holding.categoryId}` };
+    }
     if (!isNonNegativeInt(holding.marketValue)) {
       return { ok: false, error: `評価額が不正です: ${holding.name}` };
     }
@@ -129,6 +141,9 @@ function validateHoldings(holdings: unknown[]): ValidationResult {
     }
     if (!isValidAccountType(holding.accountType)) {
       return { ok: false, error: `口座種別が不正です: ${holding.name}` };
+    }
+    if (holding.accountType === 'NISA' && catAssetClassMap.get(holding.categoryId as string) !== 'investment') {
+      return { ok: false, error: `保有資産「${holding.name}」はNISA口座ですが、カテゴリが投資資産ではありません` };
     }
   }
   return { ok: true };
@@ -158,6 +173,20 @@ function validateSnapshots(snapshots: unknown[]): ValidationResult {
     monthKeys.add(snap.monthKey);
     if (!isNonNegativeInt(snap.totalAssets)) {
       return { ok: false, error: `totalAssetsが不正です: ${snap.monthKey}` };
+    }
+    if (typeof snap.assetClassBreakdown !== 'object' || snap.assetClassBreakdown === null) {
+      return { ok: false, error: `assetClassBreakdownが不正です: ${snap.monthKey}` };
+    }
+    const acd = snap.assetClassBreakdown as Record<string, unknown>;
+    if (!isNonNegativeFinite(acd.cash) || !isNonNegativeFinite(acd.investment) || !isNonNegativeFinite(acd.crypto)) {
+      return { ok: false, error: `assetClassBreakdownの値が不正です: ${snap.monthKey}` };
+    }
+    const classSum = (acd.cash as number) + (acd.investment as number) + (acd.crypto as number);
+    if (Math.round(classSum) !== (snap.totalAssets as number)) {
+      return { ok: false, error: `totalAssetsとassetClassBreakdownの合計が一致しません: ${snap.monthKey}` };
+    }
+    if (!Array.isArray(snap.holdingsSnapshot)) {
+      return { ok: false, error: `holdingsSnapshotが不正です: ${snap.monthKey}` };
     }
   }
   return { ok: true };

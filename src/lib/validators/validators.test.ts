@@ -96,6 +96,74 @@ describe('validateBackupFile', () => {
     backup.categories = backup.categories.map((c) => ({ ...c, name: `${c.name} (edited)`, color: '#ff0000' }));
     expect(validateBackupFile(backup).ok).toBe(true);
   });
+
+  it('rejects holding with unknown categoryId', () => {
+    const backup = makeValidBackup();
+    backup.holdings = [
+      { id: 'h1', categoryId: 'non-existent-cat', name: 'A', accountType: 'その他', marketValue: 1000, createdAt: '', updatedAt: '' },
+    ];
+    const result = validateBackupFile(backup);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('カテゴリID');
+  });
+
+  it('rejects NISA holding in non-investment category', () => {
+    const backup = makeValidBackup();
+    const cashCat = backup.categories.find((c) => c.id === 'cat-cash')!;
+    backup.holdings = [
+      { id: 'h1', categoryId: cashCat.id, name: 'Cash NISA', accountType: 'NISA', marketValue: 1000, createdAt: '', updatedAt: '' },
+    ];
+    const result = validateBackupFile(backup);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('NISA');
+  });
+
+  it('accepts NISA holding in investment category', () => {
+    const backup = makeValidBackup();
+    const invCat = backup.categories.find((c) => c.assetClass === 'investment')!;
+    backup.holdings = [
+      { id: 'h1', categoryId: invCat.id, name: 'Inv NISA', accountType: 'NISA', marketValue: 1000, createdAt: '', updatedAt: '' },
+    ];
+    expect(validateBackupFile(backup).ok).toBe(true);
+  });
+
+  it('rejects snapshot where totalAssets does not match assetClassBreakdown sum', () => {
+    const backup = makeValidBackup();
+    backup.snapshots = [
+      {
+        id: 's1',
+        monthKey: '2026-01',
+        snapshotDate: '2026-01-31',
+        totalAssets: 1000000,
+        categoryBreakdown: [],
+        assetClassBreakdown: { cash: 100000, investment: 200000, crypto: 0 },
+        holdingsSnapshot: [],
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    const result = validateBackupFile(backup);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('合計が一致しません');
+  });
+
+  it('accepts snapshot where totalAssets matches assetClassBreakdown sum', () => {
+    const backup = makeValidBackup();
+    backup.snapshots = [
+      {
+        id: 's1',
+        monthKey: '2026-01',
+        snapshotDate: '2026-01-31',
+        totalAssets: 1500000,
+        categoryBreakdown: [],
+        assetClassBreakdown: { cash: 500000, investment: 1000000, crypto: 0 },
+        holdingsSnapshot: [],
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    expect(validateBackupFile(backup).ok).toBe(true);
+  });
 });
 
 describe('normalizeNumericInput', () => {

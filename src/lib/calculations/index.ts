@@ -82,8 +82,11 @@ export function calcAccountTypeBreakdown(
     .sort((a, b) => b.value - a.value);
 }
 
-export function calcNisaValue(holdings: Holding[]): number {
-  return holdings.filter((h) => h.accountType === 'NISA').reduce((s, h) => s + h.marketValue, 0);
+export function calcNisaValue(holdings: Holding[], categories: AssetCategory[]): number {
+  const catMap = new Map<string, string>(categories.map((c) => [c.id, c.assetClass]));
+  return holdings
+    .filter((h) => h.accountType === 'NISA' && catMap.get(h.categoryId) === 'investment')
+    .reduce((s, h) => s + h.marketValue, 0);
 }
 
 export function calcNisaRatio(nisaValue: number, investmentTotal: number): number | null {

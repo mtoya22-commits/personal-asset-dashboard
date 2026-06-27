@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import type { AppData } from '../../hooks/useAppData.js';
 import type { AssetCategory, AppSettings, BackupFile, RecoveryBackup } from '../../types/index.js';
+import { useDirtyFlag } from '../../hooks/useUnsavedChanges.js';
 import { DownloadIcon, UploadIcon, TrashIcon } from '../../components/icons/index.js';
 import { validateBackupFile, asTypedBackupFile } from '../../lib/validators/index.js';
 import {
@@ -241,6 +242,14 @@ export function Settings({ data, masked }: SettingsProps) {
     setDeleteOpen(false);
     setDeleteInput('');
   };
+
+  const settingsChanged = useMemo(
+    () =>
+      fireTarget !== String(settings.fireTargetAmount || '') ||
+      maskOnLaunch !== settings.maskAmountsOnLaunch,
+    [fireTarget, settings.fireTargetAmount, maskOnLaunch, settings.maskAmountsOnLaunch],
+  );
+  useDirtyFlag('settings', settingsChanged || !!editCategoryId);
 
   const lastBackupDays = settings.lastBackupExportInitiatedAt
     ? Math.floor((Date.now() - new Date(settings.lastBackupExportInitiatedAt).getTime()) / (86400000))
